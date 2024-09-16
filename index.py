@@ -5,6 +5,7 @@ def main():
     pygame.init()
     WIDTH, HEIGHT = 400, 600
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    pygame.display.set_caption("Flappy Polygon")
     clock = pygame.time.Clock()
 
     game = GameLoop(screen, clock)

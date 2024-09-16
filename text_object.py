@@ -9,7 +9,7 @@ class TextObject:
         self.rect = self.image.get_rect()
         self.center = center
         if center:
-            self.rect.center = (x // 2, y // 2)
+            self.rect.center = (x, y)
         else:
             self.rect.topleft = (x, y)
 

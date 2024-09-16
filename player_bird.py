@@ -4,10 +4,10 @@ from shape_renderer import ShapeRenderer
 import math
 
 class PlayerBird(GameObject):
-    def __init__(self, x, y):
+    def __init__(self, x, y, jump_strength):
         super().__init__()
         self.velocity = 0
-        self.jump_strength = -7
+        self.jump_strength = jump_strength
         self.pipe_gap = 150
         self.angle = 0  # For rotation effect
 
