@@ -61,8 +61,9 @@ class GameLoop:
         if current_time - self.last_pipe > self.pipe_interval:
             self.last_pipe = current_time
             pipe_height = random.randint(50, self.height - self.bird.pipe_gap - 50)
-            top_pipe = Pipe(self.width, 0, pipe_height, self.pipe_speed)
-            bottom_pipe = Pipe(self.width, pipe_height + self.bird.pipe_gap, self.height - pipe_height - self.bird.pipe_gap, self.pipe_speed)
+            pipe_width = 60  # You can adjust this for wider/narrower pipes
+            top_pipe = Pipe(self.width, 0, pipe_width, pipe_height, self.pipe_speed, is_top=True)
+            bottom_pipe = Pipe(self.width, pipe_height + self.bird.pipe_gap, pipe_width, self.height - pipe_height - self.bird.pipe_gap, self.pipe_speed, is_top=False)
             self.pipes.add(top_pipe, bottom_pipe)
             self.all_sprites.add(top_pipe, bottom_pipe)
 
