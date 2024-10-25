@@ -31,9 +31,9 @@ class FlappyEnv(gym.Env):
         done = not self.game.game_active
         reward = 0
 
-        # Only give reward if pipes are present
+        # Only give reward if pipes are on screen
         if self.game.pipes:
-            reward = 1  # Reward for survival when pipes are on screen
+            reward = 1  # Reward for survival with pipes present
 
             # Extra reward for clearing pipes
             for pipe in self.game.pipes:
@@ -53,14 +53,23 @@ class FlappyEnv(gym.Env):
                 reward -= 5
                 done = True
 
-        # Penalize excessive jumps or no jumps (balance behavior)
-        if action == 1 and self.game.bird.rect.y < self.game.height * 0.2:  # Bird too high
-            reward -= 3
-        elif action == 0 and self.game.bird.rect.y > self.game.height * 0.8:  # Bird too low
-            reward -= 3
+            # Find the closest pipe and calculate the center of its gap
+            closest_pipe = min(
+                (pipe for pipe in self.game.pipes if pipe.rect.right > self.game.bird.rect.left),
+                key=lambda p: p.rect.right,
+                default=None
+            )
+
+            if closest_pipe:
+                # Calculate the center of the gap
+                gap_center_y = (closest_pipe.rect.bottom + self.game.pipe_gap / 2) if closest_pipe.is_top else (closest_pipe.rect.top - self.game.pipe_gap / 2)
+                bird_distance_from_gap = abs(self.game.bird.rect.centery - gap_center_y) / self.game.height
+
+                # Apply a small penalty if the bird is far from the gap center
+                if bird_distance_from_gap > 0.1:  # Allow some leeway around the gap center
+                    reward -= 2 * bird_distance_from_gap  # Penalize proportional to distance
 
         return self._get_observation(), reward, done, {}
-
     def _get_observation(self):
         # Bird parameters
         bird_y = self.game.bird.rect.y / self.game.height

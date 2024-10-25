@@ -85,6 +85,35 @@ class GameLoop:
         self.score = 0
         self.score_text.update_text(f"Score: {self.score}")
 
+        if self.training_active:
+            self.generate_initial_pipes()
+
+    def generate_initial_pipes(self):
+        # Populate screen with initial pipes spaced farther apart
+        num_initial_pipes = 3
+        pipe_spacing = self.width // (num_initial_pipes - 1)  # Space out more than screen width
+
+        for i in range(num_initial_pipes):
+            pipe_x = self.width + i * pipe_spacing
+            pipe_height = random.randint(50, self.height - self.pipe_gap - 50)
+            pipe_width = 60
+
+            top_pipe = Pipe(pipe_x, 0, pipe_width, pipe_height, self.pipe_speed, is_top=True)
+            bottom_pipe = Pipe(
+                pipe_x,
+                pipe_height + self.pipe_gap,
+                pipe_width,
+                self.height - pipe_height - self.pipe_gap,
+                self.pipe_speed,
+                is_top=False,
+            )
+
+            self.pipes.add(top_pipe, bottom_pipe)
+            self.all_sprites.add(top_pipe, bottom_pipe)
+
+        # Delay next pipe spawn to avoid overlap
+        self.last_pipe = pygame.time.get_ticks() + self.pipe_interval
+
     def run(self):
         while self.running:
             dt = self.clock.tick(60)
@@ -152,7 +181,12 @@ class GameLoop:
     def update_game(self, current_time):
         self.bird.update(self.gravity)
         self.pipe_interval = self.calculate_pipe_interval()
-        if current_time - self.last_pipe > self.pipe_interval:
+
+        # Only spawn a new pipe if there's enough distance from the last pipe
+        if (
+            current_time - self.last_pipe > self.pipe_interval
+            and (not self.pipes or self.width - self.pipes.sprites()[-1].rect.right > 200)
+        ):
             self.last_pipe = current_time
             pipe_height = random.randint(50, self.height - self.pipe_gap - 50)
             pipe_width = 60
@@ -169,6 +203,7 @@ class GameLoop:
             )
             self.pipes.add(top_pipe, bottom_pipe)
             self.all_sprites.add(top_pipe, bottom_pipe)
+
         self.pipes.update()
         self.check_collisions()
         self.check_score()
