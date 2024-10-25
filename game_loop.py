@@ -5,6 +5,9 @@ from player_bird import PlayerBird
 from pipe import Pipe
 from text_object import TextObject
 from settings_menu import SettingsMenu
+from stable_baselines3 import PPO
+from flappy_env import FlappyEnv
+from training_ui import TrainingUI
 
 class GameLoop:
     def __init__(self, screen, clock):
@@ -19,12 +22,12 @@ class GameLoop:
         self.default_jump_strength = -7.8
         self.default_pipe_speed = 2.4
 
-        # Initialize pipe_speed
+        # Initialize pipe_speed and pipe_interval
         self.pipe_speed = self.default_pipe_speed
-        self.base_pipe_interval = 1500  # Base interval in milliseconds
+        self.base_pipe_interval = 1500
         self.pipe_interval = self.calculate_pipe_interval()
 
-        # Initlize pipe gap
+        # Pipe gap
         self.pipe_gap = 150
 
         self.bird = PlayerBird(50, self.height // 2, self.default_jump_strength)
@@ -38,18 +41,26 @@ class GameLoop:
         # Instructions text
         self.instructions_text = TextObject("Press 'S' for Settings", self.font, self.width // 2, self.height - 30, center=True)
 
-        # Settings menu
+        # Settings menu and Training UI
         self.settings_menu = SettingsMenu(
             self.width,
             self.height,
             abs(self.bird.jump_strength),
-            abs(self.pipe_speed)
+            abs(self.pipe_speed),
+            training_mode=False
         )
         self.settings_active = False
+        self.training_active = False
+        self.training_ui = TrainingUI(self.width, self.height)
+
+        # Initialize PPO Model
+        self.env = FlappyEnv(self)
+        self.model = PPO("MlpPolicy", self.env, verbose=1)
+        self.training_steps = 10000
+        self.current_steps = 0
 
     def calculate_pipe_interval(self):
-        # Adjust interval inversely proportional to pipe speed
-        base_speed = 3  # The default pipe speed
+        base_speed = 3
         interval = self.base_pipe_interval * (base_speed / self.pipe_speed)
         return interval
 
@@ -68,8 +79,12 @@ class GameLoop:
             dt = self.clock.tick(60)
             current_time = pygame.time.get_ticks()
             self.handle_events()
-            if self.game_active and not self.settings_active:
+            
+            if self.training_active:
+                self.train_and_update_game(current_time)
+            elif self.game_active and not self.settings_active:
                 self.update_game(current_time)
+            
             self.draw()
         pygame.quit()
         sys.exit()
@@ -82,12 +97,18 @@ class GameLoop:
                 self.settings_menu.handle_event(event)
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                     self.settings_active = False
-                    # Apply new settings
-                    jump_strength_value, pipe_speed_value = self.settings_menu.get_values()
-                    self.bird.jump_strength = -jump_strength_value  # Negate to get negative value
-                    self.pipe_speed = pipe_speed_value
-                    # Recalculate pipe interval with new speed
+                    # Unpack all five values
+                    jump_strength, pipe_speed, training_mode, training_steps, learning_rate = self.settings_menu.get_values()
+                    
+                    # Apply jump strength and pipe speed settings
+                    self.bird.jump_strength = -jump_strength
+                    self.pipe_speed = pipe_speed
                     self.pipe_interval = self.calculate_pipe_interval()
+                    
+                    # Apply training settings
+                    self.training_active = training_mode
+                    self.training_steps = int(training_steps)  # Update training steps
+                    self.model.learning_rate = learning_rate  # Update learning rate
             else:
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_SPACE:
@@ -100,31 +121,15 @@ class GameLoop:
 
     def update_game(self, current_time):
         self.bird.update(self.gravity)
-        # Recalculate pipe_interval in case pipe_speed has changed
         self.pipe_interval = self.calculate_pipe_interval()
         if current_time - self.last_pipe > self.pipe_interval:
             self.last_pipe = current_time
             pipe_height = random.randint(50, self.height - self.pipe_gap - 50)
             pipe_width = 60
-            top_pipe = Pipe(
-                self.width,
-                0,
-                pipe_width,
-                pipe_height,
-                self.pipe_speed,
-                is_top=True
-            )
-            bottom_pipe = Pipe(
-                self.width,
-                pipe_height + self.pipe_gap,
-                pipe_width,
-                self.height - pipe_height - self.pipe_gap,
-                self.pipe_speed,
-                is_top=False
-            )
+            top_pipe = Pipe(self.width, 0, pipe_width, pipe_height, self.pipe_speed, is_top=True)
+            bottom_pipe = Pipe(self.width, pipe_height + self.pipe_gap, pipe_width, self.height - pipe_height - self.pipe_gap, self.pipe_speed, is_top=False)
             self.pipes.add(top_pipe, bottom_pipe)
             self.all_sprites.add(top_pipe, bottom_pipe)
-
         self.pipes.update()
         self.check_collisions()
         self.check_score()
@@ -140,15 +145,30 @@ class GameLoop:
                 self.score += 1
                 self.score_text.update_text(f"Score: {self.score}")
 
+    def train_and_update_game(self, current_time):
+        # Train for a small step and update the game visuals
+        action, _ = self.model.predict(self.env._get_observation(), deterministic=True)
+        _, _, done, _ = self.env.step(action)
+        
+        if done:
+            self.env.reset()  # Reset environment if the game ends
+        
+        # Update game state for visualization
+        self.update_game(current_time)
+
     def draw(self):
         self.screen.fill((135, 206, 235))
-        if self.game_active:
+        if self.training_active:
+            self.all_sprites.draw(self.screen)
+            self.score_text.draw(self.screen)
+            self.training_ui.draw(self.screen)  # Display training progress
+        elif self.game_active:
             self.all_sprites.draw(self.screen)
             self.score_text.draw(self.screen)
         else:
             self.game_over_text.draw(self.screen)
             self.score_text.draw_center(self.screen, y_offset=50)
-        # Draw instructions
+        
         if not self.settings_active:
             self.instructions_text.draw(self.screen)
         if self.settings_active:
