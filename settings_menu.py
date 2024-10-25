@@ -1,3 +1,4 @@
+import os
 import pygame
 
 class Slider:
@@ -105,3 +106,13 @@ class SettingsMenu:
             self.training_steps_slider.value,
             self.learning_rate_slider.value
         )
+    def save_training_results(self, model, file_path="ppo_flappy.zip"):
+        model.save(file_path)
+        print(f"Training results saved to {file_path}")
+    
+    def load_training_results(self, model, file_path="ppo_flappy.zip"):
+        if os.path.exists(file_path):
+            model.load(file_path)
+            print(f"Training results loaded from {file_path}")
+        else:
+            print(f"File {file_path} not found. Starting fresh.")
