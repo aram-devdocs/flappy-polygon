@@ -19,8 +19,8 @@ class FlappyEnv(gym.Env):
         return self._get_observation()
 
     def step(self, action):
-        # Apply action
-        if action == 1:
+        # Only jump if action is 1 and jump cooldown allows it
+        if action == 1 and self.game.bird.can_jump():
             self.game.bird.jump()
         else:
             self.game.bird.no_jump()
@@ -74,27 +74,17 @@ class FlappyEnv(gym.Env):
         # Bird parameters
         bird_y = self.game.bird.rect.y / self.game.height
         bird_velocity = self.game.bird.velocity / 10
-        bird_angle = (
-            self.game.bird.angle + 90
-        ) / 180  # Normalize angle (-90 to +90) -> (0 to 1)
+        bird_angle = (self.game.bird.angle + 90) / 180  # Normalize angle (-90 to +90) -> (0 to 1)
 
         # Pipe parameters: distance to next pipe, top and bottom pipe heights
         if self.game.pipes:
             next_pipe = min(
                 self.game.pipes,
-                key=lambda p: (
-                    p.rect.right
-                    if p.rect.right > self.game.bird.rect.left
-                    else float("inf")
-                ),
+                key=lambda p: (p.rect.right if p.rect.right > self.game.bird.rect.left else float("inf")),
             )
             pipe_distance = (next_pipe.rect.x - self.game.bird.rect.x) / self.game.width
-            top_pipe_height = (
-                next_pipe.rect.bottom / self.game.height if next_pipe.is_top else 0
-            )
-            bottom_pipe_top = (
-                next_pipe.rect.y / self.game.height if not next_pipe.is_top else 1
-            )
+            top_pipe_height = next_pipe.rect.bottom / self.game.height if next_pipe.is_top else 0
+            bottom_pipe_top = next_pipe.rect.y / self.game.height if not next_pipe.is_top else 1
         else:
             pipe_distance = 1.0  # Default to far right if no pipe exists
             top_pipe_height = 0.5  # Center default
@@ -102,6 +92,7 @@ class FlappyEnv(gym.Env):
 
         # Additional game settings
         jump_strength = abs(self.game.bird.jump_strength) / 15  # Normalize to 0-1 range
+        can_jump = 1 if self.game.bird.can_jump() else 0  # 1 if can jump, else 0
 
         return np.array(
             [
@@ -112,6 +103,7 @@ class FlappyEnv(gym.Env):
                 jump_strength,
                 bird_velocity,
                 bird_angle,
+                can_jump  # New observation for AI to learn jump timing
             ],
             dtype=np.float32,
         )

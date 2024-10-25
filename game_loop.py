@@ -229,7 +229,7 @@ class GameLoop:
 
     def train_and_update_game(self, current_time):
         obs = self.env._get_observation()
-        
+
         # Action selection with exploration
         if self.current_steps < 1000:
             action = random.choice([0, 1])
@@ -241,14 +241,9 @@ class GameLoop:
         # Debug output for action and reward
         print(f"Action: {'Jump' if action == 1 else 'No Jump'}, Reward: {reward}, Done: {done}")
 
-        # Reward and score tracking
-        self.training_ui.current_score += reward
+        # Update scores in the Training UI
+        self.training_ui.update_scores(reward, done)
 
-        if done:
-            self.training_ui.total_score += self.training_ui.current_score
-            self.training_ui.current_score = 0
-            self.env.reset()
-        
         # Update training UI with observations
         observation_labels = {
             "Bird Height": obs[0],
@@ -258,8 +253,12 @@ class GameLoop:
             "Jump Strength": obs[4],
             "Velocity": obs[5],
             "Angle": obs[6],
+            "Can Jump": obs[7],
         }
         self.training_ui.update_observations(observation_labels, self.training_ui.current_score, action)
+
+        if done:
+            self.env.reset()
 
     def draw(self):
         self.screen.fill((135, 206, 235))
