@@ -53,23 +53,26 @@ class GameLoop:
             center=True,
         )
 
+        # Initialize PPO Model
+        self.env = FlappyEnv(self)
+        self.model = PPO("MlpPolicy", self.env, verbose=1)
+        self.training_steps = 10000
+        self.current_steps = 0
+        self.learning_rate = 0.001
+
         # Settings menu and Training UI
         self.settings_menu = SettingsMenu(
             self.width,
             self.height,
             abs(self.bird.jump_strength),
             abs(self.pipe_speed),
+            self.training_steps,
+            self.learning_rate,
             training_mode=False,
         )
         self.settings_active = False
         self.training_active = False
         self.training_ui = TrainingUI(self.width, self.height)
-
-        # Initialize PPO Model
-        self.env = FlappyEnv(self)
-        self.model = PPO("MlpPolicy", self.env, verbose=1)
-        self.training_steps = 10000
-        self.current_steps = 0
 
     def calculate_pipe_interval(self):
         base_speed = 3
@@ -266,8 +269,11 @@ class GameLoop:
             observation_labels, self.training_ui.current_score, action
         )
 
+        self.training_ui.update_progress(self.current_steps, self.training_steps)
+
         if done:
             self.env.reset()
+            self.current_steps += 1
 
     def draw(self):
         self.screen.fill((135, 206, 235))

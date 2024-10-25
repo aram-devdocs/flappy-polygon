@@ -28,70 +28,111 @@ class FlappyEnv(gym.Env):
         self.game.update_game(pygame.time.get_ticks())
 
         done = not self.game.game_active
-        reward = 0
-
-        if self.game.pipes:
-            reward = 1  # Survival reward
-
-            for pipe in self.game.pipes:
-                if pipe.scored:
-                    reward += 5  # Extra reward for clearing pipes
-
-            # Penalize for hitting obstacles
-            if pygame.sprite.spritecollideany(self.game.bird, self.game.pipes):
-                reward -= 10
-                done = True
-            if (
-                self.game.bird.rect.top <= 0
-                or self.game.bird.rect.bottom >= self.game.height
-            ):
-                reward -= 5
-                done = True
-
-            # Calculate gap center and bird's distance from it
-            closest_pipe = min(
-                (
-                    pipe
-                    for pipe in self.game.pipes
-                    if pipe.rect.right > self.game.bird.rect.left
-                ),
-                key=lambda p: p.rect.right,
-                default=None,
-            )
-
-            if closest_pipe:
-                gap_top_y = (
-                    closest_pipe.rect.bottom
-                    if closest_pipe.is_top
-                    else closest_pipe.rect.y
-                ) / self.game.height
-                gap_bottom_y = (
-                    gap_top_y + self.game.pipe_gap / self.game.height
-                )  # Add normalized gap height
-
-                # Apply a small penalty if the bird is far from the gap center
-                gap_center_y = (gap_top_y + gap_bottom_y) / 2
-                bird_distance_from_gap = abs(
-                    self.game.bird.rect.centery / self.game.height - gap_center_y
-                )
-                if bird_distance_from_gap > 0.1:
-                    reward -= 2 * bird_distance_from_gap
+        reward = self._calculate_reward()
 
         return self._get_observation(), reward, done, {}
 
-    def _get_observation(self):
-        # Bird state
-        bird_y_ratio = self.game.bird.rect.y / self.game.height
-        bird_velocity = self.game.bird.velocity / 10
-        bird_angle_normalized = (
-            self.game.bird.angle + 90
-        ) / 180  # Normalize angle (-90 to +90) -> (0 to 1)
+    def _calculate_reward(self):
+        reward = 0
 
-        # Distance from top and bottom
+        if self.game.pipes:
+            reward += self._reward_for_survival()
+            reward += self._reward_for_clearing_pipes()
+            reward += self._penalty_for_hitting_obstacles()
+            reward += self._penalty_for_distance_from_gap()
+
+        return reward
+
+    def _reward_for_survival(self):
+        return 1  # Survival reward
+
+    def _reward_for_clearing_pipes(self):
+        reward = 0
+        for pipe in self.game.pipes:
+            if pipe.scored:
+                reward += 5  # Extra reward for clearing pipes
+        return reward
+
+    def _penalty_for_hitting_obstacles(self):
+        reward = 0
+        if pygame.sprite.spritecollideany(self.game.bird, self.game.pipes):
+            reward -= 10
+            self.game.game_active = False
+        if (
+            self.game.bird.rect.top <= 0
+            or self.game.bird.rect.bottom >= self.game.height
+        ):
+            reward -= 5
+            self.game.game_active = False
+        return reward
+
+    def _penalty_for_distance_from_gap(self):
+        reward = 0
+        closest_pipe = self._get_closest_pipe()
+        if closest_pipe:
+            gap_center_y, bird_distance_from_gap = self._get_gap_center_and_distance(
+                closest_pipe
+            )
+            if bird_distance_from_gap > 0.1:
+                reward -= 2 * bird_distance_from_gap
+        return reward
+
+    def _get_observation(self):
+        bird_y_ratio = self._get_bird_y_ratio()
+        bird_velocity = self._get_bird_velocity()
+        bird_angle_normalized = self._get_bird_angle_normalized()
         distance_from_top = bird_y_ratio
         distance_from_bottom = 1 - bird_y_ratio
+        pipe_distance_ratio, gap_top_y, gap_bottom_y = self._get_pipe_info()
+        time_until_jump_cooldown_over = self._get_time_until_jump_cooldown_over()
 
-        # Pipe gap information
+        return np.array(
+            [
+                bird_y_ratio,
+                bird_velocity,
+                bird_angle_normalized,
+                distance_from_top,
+                distance_from_bottom,
+                pipe_distance_ratio,
+                gap_top_y,
+                gap_bottom_y,
+                time_until_jump_cooldown_over,
+            ],
+            dtype=np.float32,
+        )
+
+    def _get_bird_y_ratio(self):
+        return self.game.bird.rect.y / self.game.height
+
+    def _get_bird_velocity(self):
+        return self.game.bird.velocity / 10
+
+    def _get_bird_angle_normalized(self):
+        return (self.game.bird.angle + 90) / 180
+
+    def _get_closest_pipe(self):
+        return min(
+            (
+                pipe
+                for pipe in self.game.pipes
+                if pipe.rect.right > self.game.bird.rect.left
+            ),
+            key=lambda p: p.rect.right,
+            default=None,
+        )
+
+    def _get_gap_center_and_distance(self, closest_pipe):
+        gap_top_y = (
+            closest_pipe.rect.bottom if closest_pipe.is_top else closest_pipe.rect.y
+        ) / self.game.height
+        gap_bottom_y = gap_top_y + self.game.pipe_gap / self.game.height
+        gap_center_y = (gap_top_y + gap_bottom_y) / 2
+        bird_distance_from_gap = abs(
+            self.game.bird.rect.centery / self.game.height - gap_center_y
+        )
+        return gap_center_y, bird_distance_from_gap
+
+    def _get_pipe_info(self):
         if self.game.pipes:
             next_pipe = min(
                 self.game.pipes,
@@ -116,27 +157,14 @@ class FlappyEnv(gym.Env):
             gap_top_y = 0.5  # Default center if no pipe
             gap_bottom_y = 0.5
 
-        # Time until next possible jump
-        time_until_jump_cooldown_over = (
+        return pipe_distance_ratio, gap_top_y, gap_bottom_y
+
+    def _get_time_until_jump_cooldown_over(self):
+        return (
             max(
                 0,
                 self.game.bird.jump_cooldown
                 - (pygame.time.get_ticks() - self.game.bird.last_jump_time),
             )
             / 1000
-        )
-
-        return np.array(
-            [
-                bird_y_ratio,
-                bird_velocity,
-                bird_angle_normalized,
-                distance_from_top,
-                distance_from_bottom,
-                pipe_distance_ratio,
-                gap_top_y,
-                gap_bottom_y,
-                time_until_jump_cooldown_over,
-            ],
-            dtype=np.float32,
         )
