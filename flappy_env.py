@@ -73,8 +73,10 @@ class FlappyEnv(gym.Env):
             gap_center_y, bird_distance_from_gap = self._get_gap_center_and_distance(
                 closest_pipe
             )
-            if bird_distance_from_gap > 0.1:
-                reward -= 2 * bird_distance_from_gap
+            if bird_distance_from_gap > 0.05:
+                reward -= 5 * bird_distance_from_gap
+            elif bird_distance_from_gap <= 0.05:
+                reward += 1  # Small positive reward for staying centered
         return reward
 
     def _get_observation(self):
@@ -85,6 +87,10 @@ class FlappyEnv(gym.Env):
         distance_from_bottom = 1 - bird_y_ratio
         pipe_distance_ratio, gap_top_y, gap_bottom_y = self._get_pipe_info()
         time_until_jump_cooldown_over = self._get_time_until_jump_cooldown_over()
+
+        gap_center_y, bird_distance_from_gap = self._get_gap_center_and_distance(
+            self._get_closest_pipe()
+        )
 
         return np.array(
             [
@@ -97,6 +103,7 @@ class FlappyEnv(gym.Env):
                 gap_top_y,
                 gap_bottom_y,
                 time_until_jump_cooldown_over,
+                bird_distance_from_gap,
             ],
             dtype=np.float32,
         )

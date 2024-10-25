@@ -264,6 +264,7 @@ class GameLoop:
             "Gap Top Y (Ratio)": obs[6],
             "Gap Bottom Y (Ratio)": obs[7],
             "Time Until Jump Cooldown (s)": obs[8],
+            "Bird Distance from Gap (Ratio)": obs[9],
         }
         self.training_ui.update_observations(
             observation_labels, self.training_ui.current_score, action
