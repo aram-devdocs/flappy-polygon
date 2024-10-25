@@ -67,8 +67,7 @@ class SettingsMenu:
         # Draw sliders
         for slider in self.sliders:
             slider.draw(surface)
-        # Draw instructions
-        instructions_font = pygame.font.SysFont(None, 24)
+        instructions_font = pygame.font.SysFont(None, 16) 
         instructions_surface = instructions_font.render("Press 'Esc' to return", True, (0, 0, 0))
         instructions_rect = instructions_surface.get_rect(center=(self.width // 2, self.height - 30))
         surface.blit(instructions_surface, instructions_rect)

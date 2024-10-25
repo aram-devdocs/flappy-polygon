@@ -16,19 +16,22 @@ class GameLoop:
         self.all_sprites = pygame.sprite.Group()
         self.pipes = pygame.sprite.Group()
         self.gravity = 0.5
-        self.default_jump_strength = -10
-        self.default_pipe_speed = 3
+        self.default_jump_strength = -7.8
+        self.default_pipe_speed = 2.4
 
         # Initialize pipe_speed
         self.pipe_speed = self.default_pipe_speed
         self.base_pipe_interval = 1500  # Base interval in milliseconds
         self.pipe_interval = self.calculate_pipe_interval()
 
+        # Initlize pipe gap
+        self.pipe_gap = 150
+
         self.bird = PlayerBird(50, self.height // 2, self.default_jump_strength)
         self.all_sprites.add(self.bird)
         self.last_pipe = pygame.time.get_ticks()
         self.font = pygame.font.SysFont(None, 48)
-        self.game_over_text = TextObject("Game Over", self.font, self.width, self.height, center=True)
+        self.game_over_text = TextObject("Game Over", self.font, self.width // 2, self.height // 2, center=True)
         self.score = 0
         self.score_text = TextObject(f"Score: {self.score}", self.font, 10, 10, center=False)
 
@@ -101,7 +104,7 @@ class GameLoop:
         self.pipe_interval = self.calculate_pipe_interval()
         if current_time - self.last_pipe > self.pipe_interval:
             self.last_pipe = current_time
-            pipe_height = random.randint(50, self.height - self.bird.pipe_gap - 50)
+            pipe_height = random.randint(50, self.height - self.pipe_gap - 50)
             pipe_width = 60
             top_pipe = Pipe(
                 self.width,
@@ -113,9 +116,9 @@ class GameLoop:
             )
             bottom_pipe = Pipe(
                 self.width,
-                pipe_height + self.bird.pipe_gap,
+                pipe_height + self.pipe_gap,
                 pipe_width,
-                self.height - pipe_height - self.bird.pipe_gap,
+                self.height - pipe_height - self.pipe_gap,
                 self.pipe_speed,
                 is_top=False
             )

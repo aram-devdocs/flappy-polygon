@@ -8,7 +8,6 @@ class PlayerBird(GameObject):
         super().__init__()
         self.velocity = 0
         self.jump_strength = jump_strength
-        self.pipe_gap = 150
         self.angle = 0  # For rotation effect
 
         # Define the polygon points for the bird (triangle)
