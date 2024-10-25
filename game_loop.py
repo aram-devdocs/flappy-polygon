@@ -235,13 +235,10 @@ class GameLoop:
                 self.score_text.update_text(f"Score: {self.score}")
 
     def train_and_update_game(self, current_time):
+
         obs = self.env._get_observation()
 
-        # Action selection with exploration
-        if self.current_steps < 1000:
-            action = random.choice([0, 1])
-        else:
-            action, _ = self.model.predict(obs, deterministic=False)
+        action, _ = self.model.predict(obs, deterministic=False)
 
         _, reward, done, _ = self.env.step(action)
 
