@@ -8,7 +8,7 @@ class TrainingUI:
         self.height = height
         self.font = pygame.font.SysFont(None, 24)
         self.current_step = 0
-        self.target_steps = 0
+        self.training_steps = 0
         self.observations = {}  # Placeholder for observed values
         self.current_score = 0
         self.total_score = 0
@@ -16,10 +16,10 @@ class TrainingUI:
         self.action_history = []  # Track recent actions for decision insights
         self.progress = 0
 
-    def update_progress(self, current_steps, target_steps):
+    def update_progress(self, current_steps, training_steps):
         self.current_step = current_steps
-        self.target_steps = target_steps
-        self.progress = current_steps / target_steps if target_steps > 0 else 0
+        self.training_steps = training_steps
+        self.progress = current_steps / training_steps if training_steps > 0 else 0
 
     def update_observations(
         self,
@@ -57,7 +57,7 @@ class TrainingUI:
 
         # Display current step and total steps inside the progress bar
         steps_text = self.font.render(
-            f"{self.current_step} / {self.target_steps}", True, (255, 255, 255)
+            f"{self.current_step} / {self.training_steps}", True, (255, 255, 255)
         )
         text_rect = steps_text.get_rect(center=((self.width - 100) / 2 + 50, 65))
         screen.blit(steps_text, text_rect)

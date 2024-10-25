@@ -7,6 +7,7 @@ class Pipe(GameObject):
         super().__init__()
         self.speed = speed
         self.scored = False  # Flag to check if the bird has passed this pipe
+        self.trained = False # Flag to check if the pipe has been trained on
         self.is_top = is_top  # Indicates whether this is the top or bottom pipe
 
         # Create the rectangle surface for the pipe

@@ -252,26 +252,26 @@ class GameLoop:
 
         # Update training UI with observations
         observation_labels = {
-            "Bird Y Position (Ratio)": obs[0],
+            "Bird Y Position (R)": obs[0],
             "Bird Velocity": obs[1],
             "Bird Angle (Normalized)": obs[2],
             "Distance from Top": obs[3],
             "Distance from Bottom": obs[4],
-            "Pipe Distance (Ratio)": obs[5],
-            "Gap Top Y (Ratio)": obs[6],
-            "Gap Bottom Y (Ratio)": obs[7],
+            "Pipe Distance (R)": obs[5],
+            "Gap Top Y (R)": obs[6],
+            "Gap Bottom Y (R)": obs[7],
             "Time Until Jump Cooldown (s)": obs[8],
-            "Bird Distance from Gap (Ratio)": obs[9],
+            "Bird Y Distance from Gap Center Y (R)": obs[9],
         }
         self.training_ui.update_observations(
             observation_labels, self.training_ui.current_score, action
         )
 
         self.training_ui.update_progress(self.current_steps, self.training_steps)
+        self.current_steps += 1
 
         if done:
             self.env.reset()
-            self.current_steps += 1
 
     def draw(self):
         self.screen.fill((135, 206, 235))
