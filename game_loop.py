@@ -10,6 +10,7 @@ from flappy_env import FlappyEnv
 from training_ui import TrainingUI
 import random
 
+
 class GameLoop:
     def __init__(self, screen, clock):
         self.screen = screen
@@ -91,14 +92,18 @@ class GameLoop:
     def generate_initial_pipes(self):
         # Populate screen with initial pipes spaced farther apart
         num_initial_pipes = 3
-        pipe_spacing = self.width // (num_initial_pipes - 1)  # Space out more than screen width
+        pipe_spacing = self.width // (
+            num_initial_pipes - 1
+        )  # Space out more than screen width
 
         for i in range(num_initial_pipes):
             pipe_x = self.width + i * pipe_spacing
             pipe_height = random.randint(50, self.height - self.pipe_gap - 50)
             pipe_width = 60
 
-            top_pipe = Pipe(pipe_x, 0, pipe_width, pipe_height, self.pipe_speed, is_top=True)
+            top_pipe = Pipe(
+                pipe_x, 0, pipe_width, pipe_height, self.pipe_speed, is_top=True
+            )
             bottom_pipe = Pipe(
                 pipe_x,
                 pipe_height + self.pipe_gap,
@@ -183,9 +188,8 @@ class GameLoop:
         self.pipe_interval = self.calculate_pipe_interval()
 
         # Only spawn a new pipe if there's enough distance from the last pipe
-        if (
-            current_time - self.last_pipe > self.pipe_interval
-            and (not self.pipes or self.width - self.pipes.sprites()[-1].rect.right > 200)
+        if current_time - self.last_pipe > self.pipe_interval and (
+            not self.pipes or self.width - self.pipes.sprites()[-1].rect.right > 200
         ):
             self.last_pipe = current_time
             pipe_height = random.randint(50, self.height - self.pipe_gap - 50)
@@ -239,23 +243,28 @@ class GameLoop:
         _, reward, done, _ = self.env.step(action)
 
         # Debug output for action and reward
-        print(f"Action: {'Jump' if action == 1 else 'No Jump'}, Reward: {reward}, Done: {done}")
+        print(
+            f"Action: {'Jump' if action == 1 else 'No Jump'}, Reward: {reward}, Done: {done}"
+        )
 
         # Update scores in the Training UI
         self.training_ui.update_scores(reward, done)
 
         # Update training UI with observations
         observation_labels = {
-            "Bird Height": obs[0],
-            "Pipe Distance": obs[1],
-            "Top Pipe Height": obs[2],
-            "Bottom Pipe Top": obs[3],
-            "Jump Strength": obs[4],
-            "Velocity": obs[5],
-            "Angle": obs[6],
-            "Can Jump": obs[7],
+            "Bird Y Position (Ratio)": obs[0],
+            "Bird Velocity": obs[1],
+            "Bird Angle (Normalized)": obs[2],
+            "Distance from Top": obs[3],
+            "Distance from Bottom": obs[4],
+            "Pipe Distance (Ratio)": obs[5],
+            "Gap Top Y (Ratio)": obs[6],
+            "Gap Bottom Y (Ratio)": obs[7],
+            "Time Until Jump Cooldown (s)": obs[8],
         }
-        self.training_ui.update_observations(observation_labels, self.training_ui.current_score, action)
+        self.training_ui.update_observations(
+            observation_labels, self.training_ui.current_score, action
+        )
 
         if done:
             self.env.reset()
