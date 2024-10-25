@@ -34,3 +34,5 @@ class PlayerBird(GameObject):
 
     def jump(self):
         self.velocity = self.jump_strength
+    def no_jump(self):
+        pass

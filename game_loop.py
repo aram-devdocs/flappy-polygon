@@ -146,15 +146,28 @@ class GameLoop:
                 self.score_text.update_text(f"Score: {self.score}")
 
     def train_and_update_game(self, current_time):
-        # Train for a small step and update the game visuals
-        action, _ = self.model.predict(self.env._get_observation(), deterministic=True)
+        # Get observation and predict action
+        obs = self.env._get_observation()
+        action, _ = self.model.predict(obs, deterministic=True)
+        
+        # Step the environment based on the action, which also updates the game state
         _, _, done, _ = self.env.step(action)
         
+        # Reset environment if the game ends (i.e., if the bird collides or falls)
         if done:
-            self.env.reset()  # Reset environment if the game ends
+            self.env.reset()
         
-        # Update game state for visualization
-        self.update_game(current_time)
+        # Pass the current observations to the Training UI for display
+        observation_labels = {
+            "Bird Height": obs[0],
+            "Pipe Distance": obs[1],
+            "Top Pipe Height": obs[2],
+            "Bottom Pipe Top": obs[3],
+            "Jump Strength": obs[4],
+            "Velocity": obs[5],
+            "Angle": obs[6]
+        }
+        self.training_ui.update_observations(observation_labels)
 
     def draw(self):
         self.screen.fill((135, 206, 235))
