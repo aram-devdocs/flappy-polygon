@@ -52,13 +52,15 @@ class GameLoop:
             self.height - 30,
             center=True,
         )
-
-        # Initialize PPO Model
-        self.env = FlappyEnv(self)
-        self.model = PPO("MlpPolicy", self.env, verbose=1)
         self.training_steps = 10000
         self.current_steps = 0
         self.learning_rate = 0.001
+
+        # Initialize PPO Model
+        self.env = FlappyEnv(self)
+        self.model = PPO(
+            "MlpPolicy", self.env, verbose=1, learning_rate=self.learning_rate
+        )
 
         # Settings menu and Training UI
         self.settings_menu = SettingsMenu(
@@ -159,14 +161,13 @@ class GameLoop:
                     self.pipe_speed = pipe_speed
                     self.pipe_interval = self.calculate_pipe_interval()
 
+                    # Apply training parameters
+                    self.training_steps = int(training_steps)
+                    self.model.learning_rate = learning_rate
                     # Check if training mode has changed
                     if training_mode != self.training_active:
                         self.training_active = training_mode
                         self.reset_game()  # Reset game state
-
-                    # Apply training parameters
-                    self.training_steps = int(training_steps)
-                    self.model.learning_rate = learning_rate
                 elif (
                     event.type == pygame.KEYDOWN and event.key == pygame.K_k
                 ):  # Save the model when 'K' is pressed

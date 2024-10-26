@@ -10,7 +10,7 @@ class PlayerBird(GameObject):
         self.velocity = 0
         self.jump_strength = jump_strength
         self.angle = 0  # For rotation effect
-        self.jump_cooldown = 320
+        self.jump_cooldown = 250  # milliseconds
         self.last_jump_time = 0
 
         # Define the polygon points for the bird (triangle)
@@ -35,9 +35,16 @@ class PlayerBird(GameObject):
 
     def jump(self):
         current_time = pygame.time.get_ticks()
-        if self.can_jump():
-            self.velocity = self.jump_strength
-            self.last_jump_time = current_time
+        time_since_last_jump = current_time - self.last_jump_time
+        if time_since_last_jump < self.jump_cooldown:
+            # Scale the jump strength based on the remaining cooldown time
+            scale_factor = time_since_last_jump / self.jump_cooldown
+            scaled_jump_strength = self.jump_strength * scale_factor
+        else:
+            scaled_jump_strength = self.jump_strength
+
+        self.velocity = scaled_jump_strength
+        self.last_jump_time = current_time
 
     def no_jump(self):
         pass

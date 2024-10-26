@@ -77,15 +77,9 @@ class FlappyEnv(gym.Env):
             gap_center_y, bird_y_distance_from_gap_center_y = (
                 self._get_gap_center_and_distance(closest_pipe)
             )
-            # if bird_distance_from_gap > 0.05:
-            #     reward -= 1 * bird_distance_from_gap
-            # else:
-            #     reward += (
-            #         1 - bird_distance_from_gap
-            #     )  # Reward for being close to the gap
 
             if abs(bird_y_distance_from_gap_center_y) > 0.1:
-                reward -= 0.5 * abs(bird_y_distance_from_gap_center_y)
+                reward -= 0.7 * abs(bird_y_distance_from_gap_center_y)
 
         distance_to_top = self._get_distance_to_top()
         distance_to_bottom = self._get_distance_to_bottom()
