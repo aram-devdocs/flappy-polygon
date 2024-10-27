@@ -26,11 +26,11 @@ class GameLoop:
 
         # Initialize pipe_speed and pipe_interval
         self.pipe_speed = self.default_pipe_speed
-        self.base_pipe_interval = 1500
+        self.base_pipe_interval = 2000
         self.pipe_interval = self.calculate_pipe_interval()
 
         # Pipe gap
-        self.pipe_gap = 150
+        self.pipe_gap = 250
 
         self.bird = PlayerBird(50, self.height // 2, self.default_jump_strength)
         self.all_sprites.add(self.bird)
@@ -92,38 +92,38 @@ class GameLoop:
         self.score = 0
         self.score_text.update_text(f"Score: {self.score}")
 
-        if self.training_active:
-            self.generate_initial_pipes()
+        # if self.training_active:
+            # self.generate_initial_pipes()
 
-    def generate_initial_pipes(self):
-        # Populate screen with initial pipes spaced farther apart
-        num_initial_pipes = 3
-        pipe_spacing = self.width // (
-            num_initial_pipes - 1
-        )  # Space out more than screen width
+    # def generate_initial_pipes(self):
+    #     # Populate screen with initial pipes spaced farther apart
+    #     num_initial_pipes = 3
+    #     pipe_spacing = self.width // (
+    #         num_initial_pipes - 1
+    #     )  # Space out more than screen width
 
-        for i in range(num_initial_pipes):
-            pipe_x = self.width + i * pipe_spacing
-            pipe_height = random.randint(50, self.height - self.pipe_gap - 50)
-            pipe_width = 60
+    #     for i in range(num_initial_pipes):
+    #         pipe_x = self.width + i * pipe_spacing
+    #         pipe_height = random.randint(50, self.height - self.pipe_gap - 50)
+    #         pipe_width = 60
 
-            top_pipe = Pipe(
-                pipe_x, 0, pipe_width, pipe_height, self.pipe_speed, is_top=True
-            )
-            bottom_pipe = Pipe(
-                pipe_x,
-                pipe_height + self.pipe_gap,
-                pipe_width,
-                self.height - pipe_height - self.pipe_gap,
-                self.pipe_speed,
-                is_top=False,
-            )
+    #         top_pipe = Pipe(
+    #             pipe_x, 0, pipe_width, pipe_height, self.pipe_speed, is_top=True
+    #         )
+    #         bottom_pipe = Pipe(
+    #             pipe_x,
+    #             pipe_height + self.pipe_gap,
+    #             pipe_width,
+    #             self.height - pipe_height - self.pipe_gap,
+    #             self.pipe_speed,
+    #             is_top=False,
+    #         )
 
-            self.pipes.add(top_pipe, bottom_pipe)
-            self.all_sprites.add(top_pipe, bottom_pipe)
+    #         self.pipes.add(top_pipe, bottom_pipe)
+    #         self.all_sprites.add(top_pipe, bottom_pipe)
 
-        # Delay next pipe spawn to avoid overlap
-        self.last_pipe = pygame.time.get_ticks() + self.pipe_interval
+    #     # Delay next pipe spawn to avoid overlap
+    #     self.last_pipe = pygame.time.get_ticks() + self.pipe_interval
 
     def run(self):
         while self.running:
@@ -264,13 +264,13 @@ class GameLoop:
             "Gap Bottom Y (R)": obs[7],
             "Time Until Jump Cooldown (s)": obs[8],
             "Bird Y Distance from Gap Center Y (R)": obs[9],
+            "Is in gap": obs[10],
         }
         self.training_ui.update_observations(
             observation_labels, self.training_ui.current_score, action
         )
 
         self.training_ui.update_progress(self.current_steps, self.training_steps)
-        self.current_steps += 1
 
         if done:
             self.env.reset()

@@ -11,7 +11,7 @@ class FlappyEnv(gym.Env):
         self.action_space = spaces.Discrete(2)  # 0 for no action, 1 for jump
         # Define observation space with detailed, descriptive inputs
         self.observation_space = spaces.Box(
-            low=0, high=1, shape=(10,), dtype=np.float32
+            low=0, high=1, shape=(11,), dtype=np.float32
         )
 
     def reset(self):
@@ -21,16 +21,19 @@ class FlappyEnv(gym.Env):
 
     def step(self, action, current_time):
 
-        # Only jump if action is 1 and jump cooldown allows it
         print("Action taken:", action)  # Debug statement
+        # Only take the action every 150 milliseconds
         if (
-            current_time - self.game.last_training_time >= 100
+            current_time - self.game.last_training_time >= 150
         ):  # 0.1 second = 100 milliseconds
             if action == 1 and self.game.bird.can_jump():
                 self.game.bird.jump()
             else:
                 self.game.bird.no_jump()
-                self.game.last_training_time = current_time
+
+            # Each Step
+            self.game.last_training_time = current_time
+            self.game.current_steps += 1
 
         # Update game state
         self.game.update_game(pygame.time.get_ticks())
@@ -44,10 +47,14 @@ class FlappyEnv(gym.Env):
         reward = 0
 
         if self.game.pipes:
-            reward += self._reward_for_survival()
             reward += self._reward_for_clearing_pipes()
             reward += self._penalty_for_hitting_obstacles()
-            reward += self._penalty_for_distance_from_gap_and_edges()
+            reward += self._pentalty_for_being_near_top_or_bottom()
+            reward += self._reward_for_being_in_gap()
+        else:
+            reward += self._reward_for_staying_in_middle_when_no_pipes()
+
+        reward += self._reward_for_survival()
 
         return reward
 
@@ -62,6 +69,15 @@ class FlappyEnv(gym.Env):
                 pipe.trained = True
         return reward
 
+    def _reward_for_staying_in_middle_when_no_pipes(self):
+        if (
+            not self.game.pipes
+            and abs(self.game.bird.rect.centery - self.game.height / 2)
+            < 0.15 * self.game.height
+        ):
+            return 0.1
+        return 0
+
     def _penalty_for_hitting_obstacles(self):
         reward = 0
         if pygame.sprite.spritecollideany(self.game.bird, self.game.pipes):
@@ -75,26 +91,21 @@ class FlappyEnv(gym.Env):
             self.game.game_active = False
         return reward
 
-    def _penalty_for_distance_from_gap_and_edges(self):
-        reward = 0
-        closest_pipe = self._get_closest_pipe()
-        if closest_pipe:
-            gap_center_y, bird_y_distance_from_gap_center_y = (
-                self._get_gap_center_and_distance(closest_pipe)
-            )
+    def _pentalty_for_being_near_top_or_bottom(self):
+        distance_from_border_where_penalty_starts = 0.1 * self.game.height
+        if self.game.bird.rect.top < distance_from_border_where_penalty_starts:
+            return -0.1
+        if (
+            self.game.bird.rect.bottom
+            > self.game.height - distance_from_border_where_penalty_starts
+        ):
+            return -0.1
+        return 0
 
-            if abs(bird_y_distance_from_gap_center_y) > 0.1:
-                reward -= 0.7 * abs(bird_y_distance_from_gap_center_y)
-
-        distance_to_top = self._get_distance_to_top()
-        distance_to_bottom = self._get_distance_to_bottom()
-
-        if distance_to_top < 0.1:
-            reward -= 2 * (0.1 - distance_to_top)
-        if distance_to_bottom < 0.1:
-            reward -= 2 * (0.1 - distance_to_bottom)
-
-        return reward
+    def _reward_for_being_in_gap(self):
+        if self._is_in_gap():
+            return 0.2
+        return 0
 
     def _get_observation(self):
         bird_y_ratio = self._get_bird_y_ratio()
@@ -104,6 +115,7 @@ class FlappyEnv(gym.Env):
         distance_from_bottom = self._get_distance_to_bottom()
         pipe_distance_ratio, gap_top_y, gap_bottom_y = self._get_pipe_info()
         time_until_jump_cooldown_over = self._get_time_until_jump_cooldown_over()
+        is_in_gap = 1 if self._is_in_gap() else 0
 
         gap_center_y, bird_y_distance_from_gap_center_y = (
             self._get_gap_center_and_distance(self._get_closest_pipe())
@@ -121,6 +133,7 @@ class FlappyEnv(gym.Env):
                 gap_bottom_y,
                 time_until_jump_cooldown_over,
                 bird_y_distance_from_gap_center_y,
+                is_in_gap,
             ],
             dtype=np.float32,
         )
@@ -146,6 +159,12 @@ class FlappyEnv(gym.Env):
         )
 
     def _get_gap_center_and_distance(self, closest_pipe):
+        # if no pipe, return middle of screen
+        if closest_pipe is None:
+            center = 0.5
+            # calculate distance from mock gap center
+            return center, self.game.bird.rect.centery / self.game.height - center
+
         gap_top_y = (
             closest_pipe.rect.bottom if closest_pipe.is_top else closest_pipe.rect.y
         ) / self.game.height
@@ -179,8 +198,8 @@ class FlappyEnv(gym.Env):
             gap_bottom_y = gap_top_y + (self.game.pipe_gap / self.game.height)
         else:
             pipe_distance_ratio = 1.0  # Default to far right if no pipe exists
-            gap_top_y = 0.5  # Default center if no pipe
-            gap_bottom_y = 0.5
+            gap_top_y = 0.3  # Default center if no pipe
+            gap_bottom_y = 0.7  # Default center if no pipe
 
         return pipe_distance_ratio, gap_top_y, gap_bottom_y
 
@@ -199,3 +218,12 @@ class FlappyEnv(gym.Env):
 
     def _get_distance_to_bottom(self):
         return (self.game.height - self.game.bird.rect.bottom) / self.game.height
+
+    def _is_in_gap(self) -> bool:
+        bird_y = self.game.bird.rect.centery
+        # if bird_y is less than   greater than gap top Y and less than gap bottom Y, return True else False
+        pipe_distance_ratio, gap_top_y, gap_bottom_y = self._get_pipe_info()
+        
+        if bird_y > gap_top_y * self.game.height and bird_y < gap_bottom_y * self.game.height:
+            return True 
+        return False
