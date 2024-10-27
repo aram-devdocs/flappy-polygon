@@ -19,13 +19,18 @@ class FlappyEnv(gym.Env):
         self.game.reset_game()
         return self._get_observation()
 
-    def step(self, action):
+    def step(self, action, current_time):
+
         # Only jump if action is 1 and jump cooldown allows it
         print("Action taken:", action)  # Debug statement
-        if action == 1 and self.game.bird.can_jump():
-            self.game.bird.jump()
-        else:
-            self.game.bird.no_jump()
+        if (
+            current_time - self.game.last_training_time >= 100
+        ):  # 0.1 second = 100 milliseconds
+            if action == 1 and self.game.bird.can_jump():
+                self.game.bird.jump()
+            else:
+                self.game.bird.no_jump()
+                self.game.last_training_time = current_time
 
         # Update game state
         self.game.update_game(pygame.time.get_ticks())

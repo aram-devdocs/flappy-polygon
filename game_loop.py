@@ -55,6 +55,7 @@ class GameLoop:
         self.training_steps = 10000
         self.current_steps = 0
         self.learning_rate = 0.001
+        self.last_training_time = 0
 
         # Initialize PPO Model
         self.env = FlappyEnv(self)
@@ -241,7 +242,7 @@ class GameLoop:
 
         action, _ = self.model.predict(obs, deterministic=False)
 
-        _, reward, done, _ = self.env.step(action)
+        _, reward, done, _ = self.env.step(action, current_time)
 
         # Debug output for action and reward
         print(
