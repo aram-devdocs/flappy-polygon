@@ -92,19 +92,24 @@ class FlappyEnv(gym.Env):
         return reward
 
     def _pentalty_for_being_near_top_or_bottom(self):
-        distance_from_border_where_penalty_starts = 0.1 * self.game.height
+        distance_from_border_where_penalty_starts = 0.2 * self.game.height
+        penalty_scale_factor = 0.1
+
         if self.game.bird.rect.top < distance_from_border_where_penalty_starts:
-            return -0.1
-        if (
-            self.game.bird.rect.bottom
-            > self.game.height - distance_from_border_where_penalty_starts
-        ):
-            return -0.1
+            distance_to_top = distance_from_border_where_penalty_starts - self.game.bird.rect.top
+            penalty = -penalty_scale_factor * np.exp(distance_to_top / distance_from_border_where_penalty_starts)
+            return penalty
+
+        if self.game.bird.rect.bottom > self.game.height - distance_from_border_where_penalty_starts:
+            distance_to_bottom = self.game.bird.rect.bottom - (self.game.height - distance_from_border_where_penalty_starts)
+            penalty = -penalty_scale_factor * np.exp(distance_to_bottom / distance_from_border_where_penalty_starts)
+            return penalty
+
         return 0
 
     def _reward_for_being_in_gap(self):
         if self._is_in_gap():
-            return 0.2
+            return 1
         return 0
 
     def _get_observation(self):
